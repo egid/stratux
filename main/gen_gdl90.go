@@ -659,8 +659,8 @@ func updateMessageStats() {
 
 	// Update average signal strength over last minute for all ADSB towers.
 	for t, tinf := range ADSBTowers {
-		if tinf.Messages_last_minute == 0 {
-			tinf.Signal_strength_last_minute = -99
+		if tinf.Messages_last_minute == 0 || tinf.Energy_last_minute == 0 {
+			tinf.Signal_strength_last_minute = -999
 		} else {
 			tinf.Signal_strength_last_minute = 10 * (math.Log10(float64((tinf.Energy_last_minute / tinf.Messages_last_minute))) - 6)
 		}
@@ -841,7 +841,11 @@ func parseInput(buf string) ([]byte, uint16) {
 	thisMsg.TimeReceived = stratuxClock.Time
 	thisMsg.Data = buf
 	thisMsg.Signal_amplitude = thisSignalStrength
-	thisMsg.Signal_strength = 20 * math.Log10((float64(thisSignalStrength))/1000)
+	if thisSignalStrength > 0 {
+		thisMsg.Signal_strength = 20 * math.Log10((float64(thisSignalStrength))/1000)
+	} else {
+		thisMsg.Signal_strength = -999
+	}
 	thisMsg.Products = make([]uint32, 0)
 	if msgtype == MSGTYPE_UPLINK {
 		// Parse the UAT message.
@@ -1207,6 +1211,30 @@ func main() {
 	} else { // if not using the FlightBox config, use "normal" log file locations
 		debugLogf = debugLog
 		dataLogFilef = dataLogFile
+	}
+	//FIXME: All of this should be removed by 08/01/2016.
+	// Check if Raspbian version is <8.0. Throw a warning if so.
+	vt, err := ioutil.ReadFile("/etc/debian_version")
+	if err == nil {
+		vtS := strings.Trim(string(vt), "\n")
+		vtF, err := strconv.ParseFloat(vtS, 32)
+		if err == nil {
+			if vtF < 8.0 {
+				var err_os error
+				if globalStatus.HardwareBuild == "FlightBox" {
+					err_os = fmt.Errorf("You are running an old Stratux image that can't be updated fully and is now deprecated. Visit https://www.openflightsolutions.com/flightbox/image-update-required for further information.")
+				} else {
+					err_os = fmt.Errorf("You are running an old Stratux image that can't be updated fully and is now deprecated. Visit http://stratux.me/ to update using the latest release image.")
+				}
+				addSystemError(err_os)
+			} else {
+				// Running Jessie or better. Remove some old init.d files.
+				//  This made its way in here because /etc/init.d/stratux invokes the update script, which can't delete the init.d file.
+				os.Remove("/etc/init.d/stratux")
+				os.Remove("/etc/rc2.d/S01stratux")
+				os.Remove("/etc/rc6.d/K01stratux")
+			}
+		}
 	}
 
 	//	replayESFilename := flag.String("eslog", "none", "ES Log filename")

@@ -54,8 +54,8 @@ cp -f interfaces mnt/etc/network/interfaces
 cp stratux-wifi.sh mnt/usr/sbin/
 chmod 755 mnt/usr/sbin/stratux-wifi.sh
 #fan/temp control script
-cp fancontrol.py mnt/root/
-chmod 755 mnt/root/fancontrol.py
+cp fancontrol.py mnt/usr/bin/
+chmod 755 mnt/usr/bin/fancontrol.py
 
 #isc-dhcp-server config
 cp -f isc-dhcp-server mnt/etc/default/isc-dhcp-server
@@ -97,7 +97,6 @@ git clone https://github.com/cyoung/stratux --recursive
 cd stratux
 make
 make install
-systemctl enable stratux
 
 #system tweaks
 cp -f modules.txt mnt/etc/modules
@@ -121,3 +120,9 @@ sed -i /etc/default/keyboard -e "/^XKBLAYOUT/s/\".*\"/\"us\"/"
 
 #boot settings
 cp -f config.txt mnt/boot/
+
+#external OLED screen
+#apt-get install -y libjpeg-dev i2c-tools python-smbus python-pip python-dev
+#git clone https://github.com/rm-hull/ssd1306
+#cd ssd1306 && python setup.py install
+#pip install pillow
